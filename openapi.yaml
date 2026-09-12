@@ -1,0 +1,1008 @@
+openapi: 3.1.0
+info:
+  title: OT Toolkit Backend API
+  version: 1.0.0
+  summary: HTTP projection of the frontend-facing ToolkitService contract.
+  description: |
+    This specification describes the backend contract expected by the OT Toolkit
+    frontend. The current desktop application injects ToolkitService directly and
+    uses MockToolkitService locally; it does not make HTTP requests yet. A future
+    HttpToolkitService can map these operations back to the same interface.
+
+    V1 has no user accounts. Every operation explicitly declares an empty security
+    requirement and requires no authentication. Implementations must remain usable
+    offline; the localhost server below is illustrative rather than mandatory.
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+    description: Optional local backend adapter
+security: []
+tags:
+  - name: Reference
+    description: Curated industrial communications content.
+  - name: Discovery
+    description: Search, hierarchy, and comparison operations.
+  - name: Preferences
+    description: Device-local user preferences; no account is involved.
+  - name: Data tools
+    description: Number and data-representation calculations.
+  - name: Modbus tools
+    description: Modbus addressing, register, CRC, and frame utilities.
+  - name: Network tools
+    description: IPv4 calculations, validation, and command generation.
+
+paths:
+  /technologies:
+    get:
+      tags: [Reference]
+      operationId: listTechnologies
+      summary: List technologies
+      description: Implements ToolkitService.list_technologies.
+      security: []
+      x-authentication: none
+      parameters:
+        - $ref: '#/components/parameters/CategoryQuery'
+      responses:
+        '200':
+          description: Technologies sorted by display name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Technology'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /technologies/{technologyId}:
+    get:
+      tags: [Reference]
+      operationId: getTechnology
+      summary: Get one technology
+      description: Implements ToolkitService.get_technology.
+      security: []
+      x-authentication: none
+      parameters:
+        - $ref: '#/components/parameters/TechnologyId'
+      responses:
+        '200':
+          description: Complete technology reference record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Technology'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /technologies/{technologyId}/hierarchy:
+    get:
+      tags: [Discovery]
+      operationId: getTechnologyHierarchy
+      summary: Resolve a technology hierarchy
+      description: Implements ToolkitService.hierarchy.
+      security: []
+      x-authentication: none
+      parameters:
+        - $ref: '#/components/parameters/TechnologyId'
+      responses:
+        '200':
+          description: Selected technology and its modeled relationships.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HierarchyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /categories:
+    get:
+      tags: [Reference]
+      operationId: listCategories
+      summary: List technology categories
+      description: Implements ToolkitService.list_categories.
+      security: []
+      x-authentication: none
+      responses:
+        '200':
+          description: Categories in frontend navigation order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /ports:
+    get:
+      tags: [Reference]
+      operationId: listPorts
+      summary: List or search common OT ports
+      description: Implements ToolkitService.list_ports.
+      security: []
+      x-authentication: none
+      parameters:
+        - $ref: '#/components/parameters/OptionalQuery'
+      responses:
+        '200':
+          description: Matching port records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PortEntry'
+
+  /glossary:
+    get:
+      tags: [Reference]
+      operationId: listGlossary
+      summary: List or search glossary entries
+      description: Implements ToolkitService.list_glossary.
+      security: []
+      x-authentication: none
+      parameters:
+        - $ref: '#/components/parameters/OptionalQuery'
+      responses:
+        '200':
+          description: Matching glossary entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GlossaryEntry'
+
+  /troubleshooting:
+    get:
+      tags: [Reference]
+      operationId: listTroubleshooting
+      summary: List troubleshooting checklists
+      description: Implements ToolkitService.list_troubleshooting.
+      security: []
+      x-authentication: none
+      responses:
+        '200':
+          description: Checklist steps keyed by stable technology ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+  /search:
+    get:
+      tags: [Discovery]
+      operationId: search
+      summary: Search the global reference index
+      description: Implements ToolkitService.search across technologies, ports, and glossary entries.
+      security: []
+      x-authentication: none
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Acronym, technology, port, standard, file type, or glossary text.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Relevance-ranked results, limited to 100 entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /comparisons:
+    post:
+      tags: [Discovery]
+      operationId: compareTechnologies
+      summary: Compare two technologies
+      description: Implements ToolkitService.compare using structured fields.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComparisonRequest'
+      responses:
+        '200':
+          description: Technology records and aligned comparison rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /favorites:
+    get:
+      tags: [Preferences]
+      operationId: listFavorites
+      summary: List local favorites
+      description: Implements ToolkitService.favorites. Values are stored for this installation, not an account.
+      security: []
+      x-authentication: none
+      responses:
+        '200':
+          description: Stable IDs of favorited items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesResponse'
+
+  /favorites/{itemId}:
+    put:
+      tags: [Preferences]
+      operationId: setFavorite
+      summary: Set favorite state
+      description: Implements ToolkitService.set_favorite idempotently.
+      security: []
+      x-authentication: none
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: Stable technology or future favoritable-item ID.
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetFavoriteRequest'
+      responses:
+        '200':
+          description: Updated complete favorite set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/numbers/convert:
+    post:
+      tags: [Data tools]
+      operationId: convertNumber
+      summary: Convert an integer between bases
+      description: Implements ToolkitService.number_conversion.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberConversionRequest'
+      responses:
+        '200':
+          description: Representations constrained to the requested numeric format.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberConversionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/ieee754/encode:
+    post:
+      tags: [Data tools]
+      operationId: encodeIeee754
+      summary: Encode a float as IEEE-754 hexadecimal
+      description: Implements ToolkitService.ieee_to_hex.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IeeeEncodeRequest'
+      responses:
+        '200':
+          description: Big-endian IEEE-754 hexadecimal representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HexResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/ieee754/decode:
+    post:
+      tags: [Data tools]
+      operationId: decodeIeee754
+      summary: Decode IEEE-754 hexadecimal as a float
+      description: Implements ToolkitService.ieee_from_hex.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IeeeDecodeRequest'
+      responses:
+        '200':
+          description: Decoded floating-point value.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [value]
+                properties:
+                  value:
+                    type: number
+                    format: double
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/endianness/decode:
+    post:
+      tags: [Data tools]
+      operationId: decodeEndianness
+      summary: Interpret four bytes in common arrangements
+      description: Implements ToolkitService.endian_decode.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HexBytesRequest'
+      responses:
+        '200':
+          description: ABCD, BADC, CDAB, and DCBA interpretations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndiannessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/modbus/address:
+    post:
+      tags: [Modbus tools]
+      operationId: convertModbusAddress
+      summary: Convert a traditional Modbus address
+      description: Implements ToolkitService.modbus_address.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModbusAddressRequest'
+      responses:
+        '200':
+          description: Register type and zero/one-based offsets.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusAddressResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/modbus/registers/decode:
+    post:
+      tags: [Modbus tools]
+      operationId: decodeModbusRegisters
+      summary: Decode two or four 16-bit registers
+      description: Implements ToolkitService.modbus_registers.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDecodeRequest'
+      responses:
+        '200':
+          description: Numeric and ASCII interpretations by arrangement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDecodeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/modbus/crc:
+    post:
+      tags: [Modbus tools]
+      operationId: calculateModbusCrc
+      summary: Calculate a Modbus RTU CRC-16
+      description: Implements ToolkitService.modbus_crc.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HexBytesRequest'
+      responses:
+        '200':
+          description: CRC value and low-byte-first transmission order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusCrcResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/modbus/frame/decode:
+    post:
+      tags: [Modbus tools]
+      operationId: decodeModbusFrame
+      summary: Decode a basic Modbus RTU frame
+      description: Implements ToolkitService.modbus_frame without advanced protocol analysis.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HexBytesRequest'
+      responses:
+        '200':
+          description: Basic frame fields and CRC validity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameDecode'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/network/subnet:
+    post:
+      tags: [Network tools]
+      operationId: calculateSubnet
+      summary: Calculate an IPv4 subnet
+      description: Implements ToolkitService.subnet.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubnetRequest'
+      responses:
+        '200':
+          description: Network boundaries and usable-host information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubnetResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/network/same-subnet:
+    post:
+      tags: [Network tools]
+      operationId: checkSameSubnet
+      summary: Determine whether two IPv4 addresses share a subnet
+      description: Implements ToolkitService.same_subnet.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SameSubnetRequest'
+      responses:
+        '200':
+          description: Same-subnet result and each calculated network address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SameSubnetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/network/validate-ips:
+    post:
+      tags: [Network tools]
+      operationId: validateIpAddresses
+      summary: Validate IPv4 addresses
+      description: Implements ToolkitService.validate_ips, including duplicate and network/broadcast detection.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpValidationRequest'
+      responses:
+        '200':
+          description: One validation result for each supplied value.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IpValidationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tools/network/commands:
+    post:
+      tags: [Network tools]
+      operationId: generateConnectivityCommands
+      summary: Generate diagnostic commands
+      description: Implements ToolkitService.commands. Commands are returned as text and must never be executed by the backend.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandRequest'
+      responses:
+        '200':
+          description: Informational Windows and Linux command lists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  parameters:
+    TechnologyId:
+      name: technologyId
+      in: path
+      required: true
+      description: Stable technology ID from the curated reference data.
+      schema:
+        type: string
+        minLength: 1
+    CategoryQuery:
+      name: category
+      in: query
+      required: false
+      description: Exact category name. Omit to list all technologies.
+      schema:
+        type: string
+    OptionalQuery:
+      name: q
+      in: query
+      required: false
+      description: Case-insensitive free-text filter. Empty or omitted returns all records.
+      schema:
+        type: string
+        default: ''
+
+  responses:
+    BadRequest:
+      description: Invalid input.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Requested technology or item was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          examples: [invalid_input]
+        message:
+          type: string
+        field:
+          type: [string, 'null']
+
+    Technology:
+      type: object
+      additionalProperties: false
+      required: [id, name, acronym, category, classification, overview]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        acronym: { type: string }
+        category: { type: string }
+        classification: { type: string }
+        overview: { type: string }
+        runs_over: { $ref: '#/components/schemas/StringList' }
+        related: { $ref: '#/components/schemas/StringList' }
+        architecture: { type: string }
+        physical_medium: { type: string }
+        topology: { type: string }
+        speed: { type: string }
+        addressing: { type: string }
+        ports: { $ref: '#/components/schemas/StringList' }
+        files: { $ref: '#/components/schemas/StringList' }
+        typical_devices: { $ref: '#/components/schemas/StringList' }
+        applications: { $ref: '#/components/schemas/StringList' }
+        key_concepts: { $ref: '#/components/schemas/StringList' }
+        advantages: { $ref: '#/components/schemas/StringList' }
+        limitations: { $ref: '#/components/schemas/StringList' }
+        faults: { $ref: '#/components/schemas/StringList' }
+        troubleshooting: { $ref: '#/components/schemas/StringList' }
+        organization: { type: string }
+        standard: { type: string }
+        sources: { $ref: '#/components/schemas/StringList' }
+
+    StringList:
+      type: array
+      items:
+        type: string
+      default: []
+
+    PortEntry:
+      type: object
+      additionalProperties: false
+      required: [port, transport, name, technology, purpose]
+      properties:
+        port: { type: string, examples: ['44818'] }
+        transport: { type: string, examples: [TCP/UDP] }
+        name: { type: string, examples: [EtherNet/IP] }
+        technology: { type: string, examples: [CIP] }
+        purpose: { type: string }
+
+    GlossaryEntry:
+      type: object
+      additionalProperties: false
+      required: [term, definition, category, related, technology_id]
+      properties:
+        term: { type: string }
+        definition: { type: string }
+        category: { type: string }
+        related: { $ref: '#/components/schemas/StringList' }
+        technology_id:
+          type: [string, 'null']
+
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required: [kind, id, title, subtitle]
+      properties:
+        kind:
+          type: string
+          enum: [Technology, Port, Glossary]
+        id: { type: string }
+        title: { type: string }
+        subtitle: { type: string }
+
+    HierarchyResponse:
+      type: object
+      additionalProperties: false
+      required: [technology, runs_over, used_by, related]
+      properties:
+        technology: { $ref: '#/components/schemas/Technology' }
+        runs_over:
+          type: array
+          items: { $ref: '#/components/schemas/Technology' }
+        used_by:
+          type: array
+          items: { $ref: '#/components/schemas/Technology' }
+        related:
+          type: array
+          items: { $ref: '#/components/schemas/Technology' }
+
+    ComparisonRequest:
+      type: object
+      additionalProperties: false
+      required: [left_id, right_id]
+      properties:
+        left_id: { type: string }
+        right_id: { type: string }
+
+    ComparisonResponse:
+      type: object
+      additionalProperties: false
+      required: [left, right, rows]
+      properties:
+        left: { $ref: '#/components/schemas/Technology' }
+        right: { $ref: '#/components/schemas/Technology' }
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonRow'
+
+    ComparisonRow:
+      type: object
+      additionalProperties: false
+      required: [label, left, right]
+      properties:
+        label: { type: string }
+        left: { type: string }
+        right: { type: string }
+
+    FavoritesResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          uniqueItems: true
+          items: { type: string }
+
+    SetFavoriteRequest:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
+    NumericFormat:
+      type: string
+      enum: [UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64]
+
+    NumberConversionRequest:
+      type: object
+      additionalProperties: false
+      required: [value, numeric_format]
+      properties:
+        value:
+          type: string
+          description: Decimal or a value prefixed with 0x, 0b, 0o, or 16#.
+        numeric_format: { $ref: '#/components/schemas/NumericFormat' }
+
+    NumberConversionResponse:
+      type: object
+      additionalProperties: false
+      required: [decimal, binary, hex, octal, bits]
+      properties:
+        decimal: { type: integer }
+        binary: { type: string, pattern: '^[01]+$' }
+        hex: { type: string, pattern: '^[0-9A-F]+$' }
+        octal: { type: string, pattern: '^[0-7]+$' }
+        bits: { type: integer, enum: [8, 16, 32, 64] }
+
+    IeeeEncodeRequest:
+      type: object
+      additionalProperties: false
+      required: [value, precision]
+      properties:
+        value: { type: number, format: double }
+        precision: { type: integer, enum: [32, 64] }
+
+    IeeeDecodeRequest:
+      type: object
+      additionalProperties: false
+      required: [hex, precision]
+      properties:
+        hex: { type: string, pattern: '^(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{16})$' }
+        precision: { type: integer, enum: [32, 64] }
+
+    HexResponse:
+      type: object
+      additionalProperties: false
+      required: [hex]
+      properties:
+        hex: { type: string, pattern: '^[0-9A-F]+$' }
+
+    HexBytesRequest:
+      type: object
+      additionalProperties: false
+      required: [hex]
+      properties:
+        hex:
+          type: string
+          description: Hexadecimal bytes; spaces and common separators are accepted.
+          examples: ['01 03 00 00 00 02']
+
+    EndiannessResponse:
+      type: object
+      additionalProperties: false
+      required: [ABCD, BADC, CDAB, DCBA]
+      properties:
+        ABCD: { $ref: '#/components/schemas/EndiannessInterpretation' }
+        BADC: { $ref: '#/components/schemas/EndiannessInterpretation' }
+        CDAB: { $ref: '#/components/schemas/EndiannessInterpretation' }
+        DCBA: { $ref: '#/components/schemas/EndiannessInterpretation' }
+
+    EndiannessInterpretation:
+      type: object
+      additionalProperties: false
+      required: [operation, hex, uint32, int32, float32]
+      properties:
+        operation: { type: string }
+        hex: { type: string }
+        uint32: { type: integer, minimum: 0, maximum: 4294967295 }
+        int32: { type: integer, minimum: -2147483648, maximum: 2147483647 }
+        float32: { type: number, format: float }
+
+    ModbusAddressRequest:
+      type: object
+      additionalProperties: false
+      required: [reference]
+      properties:
+        reference:
+          type: string
+          pattern: '^[0134][0-9]{4,}$'
+          examples: ['40001']
+
+    ModbusAddressResponse:
+      type: object
+      additionalProperties: false
+      required: [type, reference, zero_based_offset, one_based_offset]
+      properties:
+        type:
+          type: string
+          enum: [Coil, Discrete Input, Input Register, Holding Register]
+        reference: { type: string }
+        zero_based_offset: { type: integer, minimum: 0 }
+        one_based_offset: { type: integer, minimum: 1 }
+
+    RegisterDecodeRequest:
+      type: object
+      additionalProperties: false
+      required: [registers]
+      properties:
+        registers:
+          type: array
+          minItems: 2
+          maxItems: 4
+          items:
+            type: integer
+            minimum: 0
+            maximum: 65535
+          description: Exactly two or four unsigned 16-bit register values.
+
+    RegisterDecodeResponse:
+      type: object
+      description: Keys are byte/word arrangements plus ASCII.
+      additionalProperties:
+        $ref: '#/components/schemas/RegisterInterpretation'
+
+    RegisterInterpretation:
+      type: object
+      properties:
+        operation: { type: string }
+        hex: { type: string }
+        uint32: { type: integer }
+        int32: { type: integer }
+        float32: { type: number, format: float }
+        uint64: { type: integer, minimum: 0 }
+        int64: { type: integer }
+        float64: { type: number, format: double }
+        text: { type: string }
+
+    ModbusCrcResponse:
+      type: object
+      additionalProperties: false
+      required: [crc, transmission_order]
+      properties:
+        crc: { type: string, pattern: '^[0-9A-F]{4}$', examples: [0BC4] }
+        transmission_order: { type: string, examples: ['C4 0B'] }
+
+    FrameDecode:
+      type: object
+      additionalProperties: false
+      required: [address, function_code, function_name, payload_hex, crc_received, crc_calculated, crc_valid, details]
+      properties:
+        address: { type: integer, minimum: 0, maximum: 255 }
+        function_code: { type: integer, minimum: 0, maximum: 255 }
+        function_name: { type: string }
+        payload_hex: { type: string }
+        crc_received: { type: string }
+        crc_calculated: { type: string }
+        crc_valid: { type: boolean }
+        details:
+          type: object
+          additionalProperties: true
+
+    SubnetRequest:
+      type: object
+      additionalProperties: false
+      required: [ip, mask_or_cidr]
+      properties:
+        ip: { type: string, format: ipv4 }
+        mask_or_cidr:
+          type: string
+          description: CIDR prefix with optional slash, or dotted-decimal subnet mask.
+          examples: ['/24']
+
+    SubnetResult:
+      type: object
+      additionalProperties: false
+      required: [cidr, subnet_mask, network, broadcast, first_host, last_host, usable_hosts]
+      properties:
+        cidr: { type: integer, minimum: 0, maximum: 32 }
+        subnet_mask: { type: string, format: ipv4 }
+        network: { type: string, format: ipv4 }
+        broadcast: { type: string, format: ipv4 }
+        first_host: { type: string, format: ipv4 }
+        last_host: { type: string, format: ipv4 }
+        usable_hosts: { type: integer, minimum: 0 }
+
+    SameSubnetRequest:
+      type: object
+      additionalProperties: false
+      required: [ip_a, ip_b, mask_or_cidr]
+      properties:
+        ip_a: { type: string, format: ipv4 }
+        ip_b: { type: string, format: ipv4 }
+        mask_or_cidr: { type: string }
+
+    SameSubnetResponse:
+      type: object
+      additionalProperties: false
+      required: [same, network_a, network_b]
+      properties:
+        same: { type: boolean }
+        network_a: { type: string, format: ipv4 }
+        network_b: { type: string, format: ipv4 }
+
+    IpValidationRequest:
+      type: object
+      additionalProperties: false
+      required: [values]
+      properties:
+        values:
+          type: array
+          minItems: 1
+          items: { type: string }
+        mask_or_cidr:
+          type: [string, 'null']
+          default: null
+
+    IpValidationResult:
+      type: object
+      additionalProperties: false
+      required: [ip, valid, duplicate, kind]
+      properties:
+        ip: { type: string }
+        valid: { type: boolean }
+        duplicate: { type: boolean }
+        kind:
+          type: string
+          enum: [host, network, broadcast, invalid]
+        error:
+          type: [string, 'null']
+
+    CommandRequest:
+      type: object
+      additionalProperties: false
+      required: [host]
+      properties:
+        host:
+          type: string
+          description: IPv4, IPv6, or safe DNS hostname.
+        port:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 65535
+          default: null
+
+    CommandResponse:
+      type: object
+      additionalProperties: false
+      required: [windows, linux]
+      properties:
+        windows: { $ref: '#/components/schemas/StringList' }
+        linux: { $ref: '#/components/schemas/StringList' }
