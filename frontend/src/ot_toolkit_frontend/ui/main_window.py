@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from ..models import Technology
-from ..services import ToolkitService
+from ot_toolkit_backend.models import Technology
+from ot_toolkit_backend.services import ToolkitService
 
 
 THEME = """

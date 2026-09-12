@@ -19,11 +19,44 @@ uv run pytest
 
 ## Architecture
 
-- `ui/` contains presentation code and calls only `ToolkitService`.
-- `services/base.py` is the single backend boundary.
-- `services/mock.py` is the offline implementation used by the application and tests.
-- `engineering.py` contains pure calculations reached through the service.
-- `data/` contains curated, schema-validated JSON reference data.
+- `frontend/` contains the PySide6 desktop interface, launcher, UI smoke tests,
+  preview artifacts, and Windows packaging scripts.
+- `backend/` contains the service contract, local mock implementation, pure
+  engineering calculations, structured reference data, and backend tests.
+- `backend/src/ot_toolkit_backend/services/base.py` is the single backend
+  boundary used by the frontend.
+- `backend/src/ot_toolkit_backend/services/mock.py` is the complete offline
+  implementation used by the application and tests.
+- `plan.md`, `pyproject.toml`, `uv.lock`, and `AGENTS.md` apply to the complete
+  project and remain at the repository root.
 
 To connect a future backend, implement `ToolkitService` and inject it into `MainWindow`; UI code does not need to change.
 
+## Project layout
+
+```text
+backend/
+  src/ot_toolkit_backend/
+    data/          Curated JSON reference content
+    services/      Backend boundary and offline implementation
+    engineering.py Pure calculators and decoders
+    models.py      Shared data-transfer models
+  tests/
+frontend/
+  src/ot_toolkit_frontend/
+    app.py         Desktop composition root
+    ui/            PySide6 interface
+  tests/
+  scripts/         Preview and Windows build scripts
+  artifacts/       Visual QA renders
+```
+
+## Build the Windows executable
+
+From the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File frontend/scripts/build_windows.ps1
+```
+
+The executable is written to `frontend/dist/OT-Toolkit.exe`.

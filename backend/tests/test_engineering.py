@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from ot_toolkit import engineering
+from ot_toolkit_backend import engineering
 
 
 @pytest.mark.parametrize(
@@ -86,4 +86,3 @@ def test_command_generator_does_not_accept_shell_content():
         engineering.generate_commands("10.0.0.1; whoami", 502)
     commands = engineering.generate_commands("plc-01.local", 502)
     assert commands["windows"][-1] == "Test-NetConnection plc-01.local -Port 502"
-

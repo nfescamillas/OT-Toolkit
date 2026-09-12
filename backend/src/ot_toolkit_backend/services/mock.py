@@ -24,7 +24,7 @@ class MockToolkitService(ToolkitService):
 
     @staticmethod
     def _read_json(name: str) -> list[dict[str, Any]]:
-        return json.loads(files("ot_toolkit.data").joinpath(name).read_text(encoding="utf-8"))
+        return json.loads(files("ot_toolkit_backend.data").joinpath(name).read_text(encoding="utf-8"))
 
     @classmethod
     def _load_technologies(cls) -> dict[str, Technology]:
