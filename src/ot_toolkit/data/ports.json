@@ -1,0 +1,19 @@
+[
+ {"port":"20/21","transport":"TCP","name":"FTP","technology":"File transfer","purpose":"Data and control channels"},
+ {"port":"22","transport":"TCP","name":"SSH","technology":"Secure shell","purpose":"Encrypted remote administration"},
+ {"port":"23","transport":"TCP","name":"Telnet","technology":"Remote terminal","purpose":"Unencrypted legacy administration"},
+ {"port":"53","transport":"TCP/UDP","name":"DNS","technology":"Name resolution","purpose":"Hostname resolution"},
+ {"port":"67/68","transport":"UDP","name":"DHCP","technology":"Address configuration","purpose":"Server/client address assignment"},
+ {"port":"80","transport":"TCP","name":"HTTP","technology":"Web","purpose":"Unencrypted web interface"},
+ {"port":"102","transport":"TCP","name":"ISO-on-TCP","technology":"Siemens S7","purpose":"S7 and ISO transport services"},
+ {"port":"123","transport":"UDP","name":"NTP","technology":"Time synchronization","purpose":"Network time"},
+ {"port":"161/162","transport":"UDP","name":"SNMP","technology":"Network monitoring","purpose":"Polling and traps"},
+ {"port":"443","transport":"TCP","name":"HTTPS","technology":"Secure web","purpose":"Encrypted web interface"},
+ {"port":"502","transport":"TCP","name":"Modbus TCP","technology":"Modbus","purpose":"Modbus application messaging"},
+ {"port":"1883","transport":"TCP","name":"MQTT","technology":"IIoT messaging","purpose":"Unencrypted broker connection"},
+ {"port":"2222","transport":"UDP","name":"EtherNet/IP I/O","technology":"CIP","purpose":"Implicit I/O messaging"},
+ {"port":"4840","transport":"TCP","name":"OPC UA","technology":"OPC","purpose":"Default UA binary endpoint"},
+ {"port":"8883","transport":"TCP","name":"MQTT TLS","technology":"IIoT messaging","purpose":"TLS broker connection"},
+ {"port":"44818","transport":"TCP/UDP","name":"EtherNet/IP","technology":"CIP","purpose":"Encapsulation and explicit messaging"},
+ {"port":"47808","transport":"UDP","name":"BACnet/IP","technology":"BACnet","purpose":"Default BAC0 port"}
+]

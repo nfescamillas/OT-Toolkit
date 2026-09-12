@@ -1,0 +1,29 @@
+[project]
+name = "ot-toolkit"
+version = "1.0.0"
+description = "Offline industrial communications and OT engineering toolkit"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["PySide6>=6.8,<7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-cov>=6"]
+package = ["pyinstaller>=6.16"]
+
+[project.scripts]
+ot-toolkit = "ot_toolkit.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ot_toolkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["ot_toolkit"]
+omit = ["*/ui/*", "*/app.py"]

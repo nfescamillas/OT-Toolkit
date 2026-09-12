@@ -1,0 +1,12 @@
+.venv/
+.uv-cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+build/
+dist/
+*.spec
+.preview-favorites.json
+
