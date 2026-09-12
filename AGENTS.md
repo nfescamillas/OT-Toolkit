@@ -41,11 +41,16 @@ internet connection.
 - Connectivity commands are informational output only and must never be
   executed by the application.
 - FastAPI code belongs under `backend/src/ot_toolkit_backend/api/` and is split
-  into routers, HTTP models, the in-memory store, and authentication helpers.
+  into routers, HTTP models, SQLAlchemy tables/database setup, the database
+  store, and authentication helpers.
+- Keep repository queries dialect-neutral. Isolate database-specific engine
+  settings in `api/database.py` and select the connection exclusively through
+  `OT_TOOLKIT_DATABASE_URL`.
 - Keep `openapi.yaml` synchronized with every API route or schema change.
 - Reference, discovery, and calculator routes are public. Per-user favorites
-  require bearer authentication. Never persist submitted plaintext passwords
-  or bearer tokens, and never include production credentials in files or logs.
+  require bearer authentication. Persist only password hashes and bearer-token
+  digests, never their plaintext values, and never include production
+  credentials in files or logs.
 
 ## Reference content
 

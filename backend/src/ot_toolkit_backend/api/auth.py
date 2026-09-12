@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
 
-from .store import InMemoryStore, UserRecord
+from .store import DatabaseStore, UserRecord
 
 
 password_hash = PasswordHash.recommended()
@@ -19,13 +19,13 @@ def verify_password(password: str, hashed: str) -> bool:
     return password_hash.verify(password, hashed)
 
 
-def get_store(request: Request) -> InMemoryStore:
+def get_store(request: Request) -> DatabaseStore:
     return request.app.state.store
 
 
 def require_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
-    store: InMemoryStore = Depends(get_store),
+    store: DatabaseStore = Depends(get_store),
 ) -> UserRecord:
     if credentials is None or credentials.scheme.casefold() != "bearer":
         raise HTTPException(
@@ -42,4 +42,3 @@ def require_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
-

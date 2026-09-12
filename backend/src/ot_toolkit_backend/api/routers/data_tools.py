@@ -10,7 +10,7 @@ from ..models import (
     EndiannessOut, FloatOut, HexBytesRequest, HexOut, IeeeDecodeRequest,
     IeeeEncodeRequest, NumberConversionOut, NumberConversionRequest,
 )
-from ..store import InMemoryStore
+from ..store import DatabaseStore
 
 
 router = APIRouter(prefix="/tools", tags=["Data tools"])
@@ -35,21 +35,20 @@ def safe_float_fields(value: Any) -> Any:
 
 
 @router.post("/numbers/convert", response_model=NumberConversionOut)
-def convert_number(payload: NumberConversionRequest, store: InMemoryStore = Depends(get_store)):
+def convert_number(payload: NumberConversionRequest, store: DatabaseStore = Depends(get_store)):
     return store.service.number_conversion(payload.value, payload.numeric_format)
 
 
 @router.post("/ieee754/encode", response_model=HexOut)
-def encode_ieee754(payload: IeeeEncodeRequest, store: InMemoryStore = Depends(get_store)):
+def encode_ieee754(payload: IeeeEncodeRequest, store: DatabaseStore = Depends(get_store)):
     return HexOut(hex=store.service.ieee_to_hex(payload.value, payload.precision))
 
 
 @router.post("/ieee754/decode", response_model=FloatOut)
-def decode_ieee754(payload: IeeeDecodeRequest, store: InMemoryStore = Depends(get_store)):
+def decode_ieee754(payload: IeeeDecodeRequest, store: DatabaseStore = Depends(get_store)):
     return FloatOut(value=safe_float(store.service.ieee_from_hex(payload.hex, payload.precision)))
 
 
 @router.post("/endianness/decode", response_model=EndiannessOut)
-def decode_endianness(payload: HexBytesRequest, store: InMemoryStore = Depends(get_store)):
+def decode_endianness(payload: HexBytesRequest, store: DatabaseStore = Depends(get_store)):
     return safe_float_fields(store.service.endian_decode(payload.hex))
-

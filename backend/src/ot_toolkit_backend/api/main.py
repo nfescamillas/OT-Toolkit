@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .auth import hash_password
 from .routers import auth, data_tools, discovery, modbus, network, preferences, reference
-from .store import InMemoryStore
+from .store import DatabaseStore
 
 
 API_PREFIX = "/api/v1"
@@ -19,18 +21,26 @@ def error_response(status_code: int, code: str, message: str, field: str | None 
     )
 
 
-def create_app(store: InMemoryStore | None = None) -> FastAPI:
+def create_app(store: DatabaseStore | None = None) -> FastAPI:
+    database_store = store or DatabaseStore()
+    if database_store.get_user("demo") is None:
+        database_store.add_user("demo", hash_password("demo-password"))
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        yield
+        application.state.store.close()
+
     application = FastAPI(
         title="OT Toolkit Backend API",
         version="1.0.0",
-        description="In-memory FastAPI adapter for the OT Toolkit service contract.",
+        description="Database-backed FastAPI adapter for the OT Toolkit service contract.",
         openapi_url=f"{API_PREFIX}/openapi.json",
         docs_url=f"{API_PREFIX}/docs",
         redoc_url=f"{API_PREFIX}/redoc",
+        lifespan=lifespan,
     )
-    application.state.store = store or InMemoryStore()
-    if application.state.store.get_user("demo") is None:
-        application.state.store.add_user("demo", hash_password("demo-password"))
+    application.state.store = database_store
 
     application.include_router(auth.router, prefix=API_PREFIX)
     application.include_router(reference.router, prefix=API_PREFIX)
@@ -67,11 +77,13 @@ def create_app(store: InMemoryStore | None = None) -> FastAPI:
     return application
 
 
-app = create_app()
-
-
 def run() -> None:
     import uvicorn
 
-    uvicorn.run("ot_toolkit_backend.api.main:app", host="127.0.0.1", port=8000, reload=False)
-
+    uvicorn.run(
+        "ot_toolkit_backend.api.main:create_app",
+        factory=True,
+        host="127.0.0.1",
+        port=8000,
+        reload=False,
+    )

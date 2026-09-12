@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ot_toolkit_backend.api.main import create_app
+from ot_toolkit_backend.api.store import DatabaseStore
 from ot_toolkit_backend.services import MockToolkitService
 
 
@@ -13,8 +14,14 @@ def service(tmp_path: Path) -> MockToolkitService:
 
 
 @pytest.fixture
-def api_client() -> TestClient:
-    with TestClient(create_app()) as client:
+def api_store(tmp_path: Path) -> DatabaseStore:
+    database_path = (tmp_path / "api.db").as_posix()
+    return DatabaseStore(f"sqlite+pysqlite:///{database_path}")
+
+
+@pytest.fixture
+def api_client(api_store: DatabaseStore) -> TestClient:
+    with TestClient(create_app(api_store)) as client:
         yield client
 
 

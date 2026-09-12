@@ -7,10 +7,11 @@ info:
     This specification describes the backend contract expected by the OT Toolkit
     frontend. The desktop application injects HttpToolkitService, which maps
     these HTTP operations back to the same ToolkitService interface used by the
-    UI. The FastAPI server uses the seeded MockToolkitService behind this adapter.
+    UI. The FastAPI server uses the seeded MockToolkitService for reference and
+    calculation data, with SQLAlchemy persistence for users, tokens, and favorites.
 
     Reference, discovery, and engineering operations require no authentication.
-    Favorites are scoped to an in-memory user and require an opaque bearer token.
+    Favorites are scoped to a database user and require an opaque bearer token.
     Implementations must remain usable offline; the localhost server below is
     illustrative rather than mandatory.
 servers:
@@ -19,7 +20,7 @@ servers:
 security: []
 tags:
   - name: Authentication
-    description: In-memory accounts and opaque bearer-token issuance.
+    description: Database-backed accounts and opaque bearer-token issuance.
   - name: Reference
     description: Curated industrial communications content.
   - name: Discovery
@@ -38,8 +39,8 @@ paths:
     post:
       tags: [Authentication]
       operationId: register
-      summary: Register an in-memory user
-      description: Passwords are stored only as Argon2 hashes. Accounts reset when the server restarts.
+      summary: Register a user
+      description: Passwords are stored only as Argon2 hashes in the configured database.
       security: []
       x-authentication: none
       requestBody:
@@ -63,7 +64,7 @@ paths:
       tags: [Authentication]
       operationId: createToken
       summary: Exchange credentials for a bearer token
-      description: Returns an opaque token valid for eight hours in the running process.
+      description: Returns an opaque token valid for eight hours; only its digest is persisted.
       security: []
       x-authentication: none
       requestBody:
@@ -282,7 +283,7 @@ paths:
       tags: [Preferences]
       operationId: listFavorites
       summary: List local favorites
-      description: Returns favorites scoped to the authenticated in-memory user.
+      description: Returns favorites scoped to the authenticated database user.
       security:
         - bearerAuth: []
       x-authentication: bearer
@@ -301,7 +302,7 @@ paths:
       tags: [Preferences]
       operationId: setFavorite
       summary: Set favorite state
-      description: Sets favorite state idempotently for the authenticated in-memory user.
+      description: Persists favorite state idempotently for the authenticated database user.
       security:
         - bearerAuth: []
       x-authentication: bearer

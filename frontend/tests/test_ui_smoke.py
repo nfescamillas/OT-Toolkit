@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 from fastapi.testclient import TestClient
 
 from ot_toolkit_backend.api.main import create_app
+from ot_toolkit_backend.api.store import DatabaseStore
 from ot_toolkit_backend.services import HttpToolkitService
 from ot_toolkit_frontend.ui.main_window import MainWindow
 
@@ -22,7 +23,8 @@ def test_main_window_builds_with_mock_service(service):
 
 def test_main_window_builds_with_real_backend_client():
     app = QApplication.instance() or QApplication([])
-    with TestClient(create_app(), base_url="http://testserver/api/v1/") as client:
+    api = create_app(DatabaseStore("sqlite+pysqlite:///:memory:"))
+    with TestClient(api, base_url="http://testserver/api/v1/") as client:
         service = HttpToolkitService(client=client)
         window = MainWindow(service)
         assert window.nav.count() == 11

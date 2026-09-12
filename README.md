@@ -38,6 +38,7 @@ Runtime configuration can be overridden without changing source code:
 | `OT_TOOLKIT_API_URL` | `http://127.0.0.1:8000/api/v1` | Backend API base URL |
 | `OT_TOOLKIT_USERNAME` | `demo` | Username used for favorites |
 | `OT_TOOLKIT_PASSWORD` | `demo-password` | Password used to obtain bearer tokens |
+| `OT_TOOLKIT_DATABASE_URL` | `sqlite+pysqlite:///./ot_toolkit.db` | SQLAlchemy database connection URL |
 
 ## Test
 
@@ -53,8 +54,8 @@ uv run pytest
 
 ## FastAPI backend
 
-The HTTP backend implements the root `openapi.yaml` contract with an in-memory
-store. Start it from the repository root:
+The HTTP backend implements the root `openapi.yaml` contract with SQLAlchemy
+persistence. Start it from the repository root:
 
 ```powershell
 uv sync --extra dev
@@ -74,9 +75,21 @@ password: demo-password
 ```
 
 Passwords are held only as Argon2 hashes, tokens are opaque and expire after
-eight hours, and users, tokens, and API favorites reset whenever the server
-restarts. The frontend keeps bearer tokens only in memory and automatically
-signs in again when a token expires or the backend restarts.
+eight hours, and only token digests are stored. Users and favorites persist
+across restarts. The frontend keeps bearer tokens only in memory and
+automatically signs in again when a token expires.
+
+SQLite is used by default and creates `ot_toolkit.db` in the repository root.
+To choose another database, set a SQLAlchemy URL before starting the server:
+
+```powershell
+$env:OT_TOOLKIT_DATABASE_URL = "sqlite+pysqlite:///./my-ot-toolkit.db"
+uv run ot-toolkit-api
+```
+
+The persistence layer does not issue dialect-specific queries. A future
+PostgreSQL deployment can use a PostgreSQL SQLAlchemy URL after its selected
+DBAPI driver is added to the environment.
 
 ## Architecture
 
@@ -90,6 +103,9 @@ signs in again when a token expires or the backend restarts.
   by the desktop composition root.
 - `backend/src/ot_toolkit_backend/services/mock.py` is the complete offline
   implementation used behind FastAPI and in isolated tests.
+- `backend/src/ot_toolkit_backend/api/database.py` owns engine configuration;
+  `tables.py` defines the portable ORM schema, and `store.py` owns persistence
+  queries.
 - `plan.md`, `pyproject.toml`, `uv.lock`, and `AGENTS.md` apply to the complete
   project and remain at the repository root.
 

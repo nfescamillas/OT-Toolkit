@@ -9,6 +9,7 @@ dependencies = [
   "httpx>=0.28,<1",
   "pwdlib[argon2]>=0.3,<1",
   "PySide6>=6.8,<7",
+  "SQLAlchemy>=2.0.40,<3",
   "uvicorn>=0.35,<1",
 ]
 

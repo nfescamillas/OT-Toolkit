@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ot_toolkit_backend.api.main import create_app
+from ot_toolkit_backend.api.store import DatabaseStore
 from ot_toolkit_backend.services import (
     HttpToolkitService,
     ToolkitAuthenticationError,
@@ -16,7 +17,7 @@ from ot_toolkit_backend.services import (
 
 @pytest.fixture
 def http_service():
-    app = create_app()
+    app = create_app(DatabaseStore("sqlite+pysqlite:///:memory:"))
     with TestClient(app, base_url="http://testserver/api/v1/") as client:
         yield HttpToolkitService(client=client), app
 
@@ -41,12 +42,12 @@ def test_reference_discovery_and_preferences_use_the_api(http_service):
     assert any(row[0] == "Configuration files" for row in comparison.rows)
 
     assert service.favorites() == set()
-    assert service._access_token in app.state.store._tokens
+    assert app.state.store.username_for_token(service._access_token) == "demo"
     first_token = service._access_token
     service.set_favorite("profinet", True)
     assert service.favorites() == {"profinet"}
 
-    app.state.store._tokens.clear()
+    app.state.store.revoke_tokens("demo")
     assert service.favorites() == {"profinet"}
     assert service._access_token != first_token
     service.set_favorite("profinet", False)
@@ -83,7 +84,7 @@ def test_http_service_translates_documented_errors(http_service):
 
 
 def test_http_service_reports_bad_credentials():
-    app = create_app()
+    app = create_app(DatabaseStore("sqlite+pysqlite:///:memory:"))
     with TestClient(app, base_url="http://testserver/api/v1/") as client:
         service = HttpToolkitService(username="demo", password="wrong-password", client=client)
         with pytest.raises(ToolkitAuthenticationError, match="Incorrect username or password"):
