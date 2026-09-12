@@ -4,6 +4,18 @@ An offline Windows desktop field companion for automation and OT engineers. It c
 
 ## Run
 
+With GNU Make installed, set up and start the desktop app with:
+
+```powershell
+make setup
+make run
+```
+
+Run `make help` to list all shortcuts. `make dev` starts both the desktop app
+and FastAPI backend, while `make api` starts only the HTTP service.
+
+The equivalent commands without Make are:
+
 ```powershell
 uv sync --extra dev
 uv run ot-toolkit
@@ -12,6 +24,12 @@ uv run ot-toolkit
 The default app uses `MockToolkitService`, a complete local implementation of the service contract. It reads bundled JSON and uses local storage for favorites, so no server, account, or internet connection is required.
 
 ## Test
+
+```powershell
+make test
+```
+
+Or run pytest directly:
 
 ```powershell
 uv run pytest
