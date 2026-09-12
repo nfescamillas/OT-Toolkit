@@ -9,14 +9,17 @@ info:
     uses MockToolkitService locally; it does not make HTTP requests yet. A future
     HttpToolkitService can map these operations back to the same interface.
 
-    V1 has no user accounts. Every operation explicitly declares an empty security
-    requirement and requires no authentication. Implementations must remain usable
-    offline; the localhost server below is illustrative rather than mandatory.
+    Reference, discovery, and engineering operations require no authentication.
+    Favorites are scoped to an in-memory user and require an opaque bearer token.
+    Implementations must remain usable offline; the localhost server below is
+    illustrative rather than mandatory.
 servers:
   - url: http://127.0.0.1:8000/api/v1
     description: Optional local backend adapter
 security: []
 tags:
+  - name: Authentication
+    description: In-memory accounts and opaque bearer-token issuance.
   - name: Reference
     description: Curated industrial communications content.
   - name: Discovery
@@ -31,6 +34,54 @@ tags:
     description: IPv4 calculations, validation, and command generation.
 
 paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      operationId: register
+      summary: Register an in-memory user
+      description: Passwords are stored only as Argon2 hashes. Accounts reset when the server restarts.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered user without password material.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/token:
+    post:
+      tags: [Authentication]
+      operationId: createToken
+      summary: Exchange credentials for a bearer token
+      description: Returns an opaque token valid for eight hours in the running process.
+      security: []
+      x-authentication: none
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Bearer token and lifetime.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /technologies:
     get:
       tags: [Reference]
@@ -231,9 +282,10 @@ paths:
       tags: [Preferences]
       operationId: listFavorites
       summary: List local favorites
-      description: Implements ToolkitService.favorites. Values are stored for this installation, not an account.
-      security: []
-      x-authentication: none
+      description: Returns favorites scoped to the authenticated in-memory user.
+      security:
+        - bearerAuth: []
+      x-authentication: bearer
       responses:
         '200':
           description: Stable IDs of favorited items.
@@ -241,15 +293,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FavoritesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /favorites/{itemId}:
     put:
       tags: [Preferences]
       operationId: setFavorite
       summary: Set favorite state
-      description: Implements ToolkitService.set_favorite idempotently.
-      security: []
-      x-authentication: none
+      description: Sets favorite state idempotently for the authenticated in-memory user.
+      security:
+        - bearerAuth: []
+      x-authentication: bearer
       parameters:
         - name: itemId
           in: path
@@ -273,6 +328,10 @@ paths:
                 $ref: '#/components/schemas/FavoritesResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /tools/numbers/convert:
     post:
@@ -346,8 +405,11 @@ paths:
                 required: [value]
                 properties:
                   value:
-                    type: number
-                    format: double
+                    oneOf:
+                      - type: number
+                        format: double
+                      - type: string
+                        enum: [nan, inf, -inf]
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -570,6 +632,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Opaque eight-hour token returned by POST /auth/token.
+
   parameters:
     TechnologyId:
       name: technologyId
@@ -608,6 +677,17 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, invalid, or expired bearer token, or incorrect login credentials.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          description: Always Bearer.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
@@ -622,6 +702,57 @@ components:
           type: string
         field:
           type: [string, 'null']
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: '^[A-Za-z0-9_.-]+$'
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 256
+          writeOnly: true
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password:
+          type: string
+          format: password
+          writeOnly: true
+
+    User:
+      type: object
+      additionalProperties: false
+      required: [username]
+      properties:
+        username: { type: string }
+
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+          minLength: 32
+        token_type:
+          type: string
+          const: bearer
+        expires_in:
+          type: integer
+          minimum: 1
+          examples: [28800]
 
     Technology:
       type: object
@@ -834,7 +965,10 @@ components:
         hex: { type: string }
         uint32: { type: integer, minimum: 0, maximum: 4294967295 }
         int32: { type: integer, minimum: -2147483648, maximum: 2147483647 }
-        float32: { type: number, format: float }
+        float32:
+          oneOf:
+            - { type: number, format: float }
+            - { type: string, enum: [nan, inf, -inf] }
 
     ModbusAddressRequest:
       type: object
@@ -886,10 +1020,16 @@ components:
         hex: { type: string }
         uint32: { type: integer }
         int32: { type: integer }
-        float32: { type: number, format: float }
+        float32:
+          oneOf:
+            - { type: number, format: float }
+            - { type: string, enum: [nan, inf, -inf] }
         uint64: { type: integer, minimum: 0 }
         int64: { type: integer }
-        float64: { type: number, format: double }
+        float64:
+          oneOf:
+            - { type: number, format: double }
+            - { type: string, enum: [nan, inf, -inf] }
         text: { type: string }
 
     ModbusCrcResponse:

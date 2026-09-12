@@ -37,6 +37,12 @@ internet connection.
   telemetry, remote fonts, or CDN assets for core features.
 - Connectivity commands are informational output only and must never be
   executed by the application.
+- FastAPI code belongs under `backend/src/ot_toolkit_backend/api/` and is split
+  into routers, HTTP models, the in-memory store, and authentication helpers.
+- Keep `openapi.yaml` synchronized with every API route or schema change.
+- Reference, discovery, and calculator routes are public. Per-user favorites
+  require bearer authentication. Never persist submitted plaintext passwords
+  or bearer tokens, and never include production credentials in files or logs.
 
 ## Reference content
 

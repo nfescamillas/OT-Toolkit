@@ -17,6 +17,33 @@ The default app uses `MockToolkitService`, a complete local implementation of th
 uv run pytest
 ```
 
+## FastAPI backend
+
+The optional HTTP adapter implements the root `openapi.yaml` contract with an
+in-memory store. Start it from the repository root:
+
+```powershell
+uv sync --extra dev
+uv run ot-toolkit-api
+```
+
+Interactive documentation is available at
+`http://127.0.0.1:8000/api/v1/docs`. Reference, discovery, and calculation
+routes are public. Favorites require a bearer token from `POST
+/api/v1/auth/token`.
+
+Development seed account:
+
+```text
+username: demo
+password: demo-password
+```
+
+Passwords are held only as Argon2 hashes, tokens are opaque and expire after
+eight hours, and users, tokens, and API favorites reset whenever the server
+restarts. The desktop application's existing local mock service remains the
+default, so it still runs completely offline without starting FastAPI.
+
 ## Architecture
 
 - `frontend/` contains the PySide6 desktop interface, launcher, UI smoke tests,
