@@ -4,24 +4,40 @@ An offline Windows desktop field companion for automation and OT engineers. It c
 
 ## Run
 
-With GNU Make installed, set up and start the desktop app with:
+With GNU Make installed, set up and start the backend and desktop app with:
 
 ```powershell
 make setup
-make run
+make dev
 ```
 
 Run `make help` to list all shortcuts. `make dev` starts both the desktop app
-and FastAPI backend, while `make api` starts only the HTTP service.
+and FastAPI backend. Use `make api` and `make run` in separate terminals when
+you want to manage the processes independently.
 
-The equivalent commands without Make are:
+The equivalent commands without Make are run in two terminals:
 
 ```powershell
+# Terminal 1
 uv sync --extra dev
+uv run ot-toolkit-api
+
+# Terminal 2
 uv run ot-toolkit
 ```
 
-The default app uses `MockToolkitService`, a complete local implementation of the service contract. It reads bundled JSON and uses local storage for favorites, so no server, account, or internet connection is required.
+The frontend uses `HttpToolkitService` for every backend operation. By default,
+it connects to `http://127.0.0.1:8000/api/v1` and signs in with the seeded demo
+account for authenticated favorites. The backend uses bundled data and remains
+fully usable without an internet connection.
+
+Runtime configuration can be overridden without changing source code:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OT_TOOLKIT_API_URL` | `http://127.0.0.1:8000/api/v1` | Backend API base URL |
+| `OT_TOOLKIT_USERNAME` | `demo` | Username used for favorites |
+| `OT_TOOLKIT_PASSWORD` | `demo-password` | Password used to obtain bearer tokens |
 
 ## Test
 
@@ -37,8 +53,8 @@ uv run pytest
 
 ## FastAPI backend
 
-The optional HTTP adapter implements the root `openapi.yaml` contract with an
-in-memory store. Start it from the repository root:
+The HTTP backend implements the root `openapi.yaml` contract with an in-memory
+store. Start it from the repository root:
 
 ```powershell
 uv sync --extra dev
@@ -59,8 +75,8 @@ password: demo-password
 
 Passwords are held only as Argon2 hashes, tokens are opaque and expire after
 eight hours, and users, tokens, and API favorites reset whenever the server
-restarts. The desktop application's existing local mock service remains the
-default, so it still runs completely offline without starting FastAPI.
+restarts. The frontend keeps bearer tokens only in memory and automatically
+signs in again when a token expires or the backend restarts.
 
 ## Architecture
 
@@ -70,12 +86,15 @@ default, so it still runs completely offline without starting FastAPI.
   engineering calculations, structured reference data, and backend tests.
 - `backend/src/ot_toolkit_backend/services/base.py` is the single backend
   boundary used by the frontend.
+- `backend/src/ot_toolkit_backend/services/http.py` is the real HTTP client used
+  by the desktop composition root.
 - `backend/src/ot_toolkit_backend/services/mock.py` is the complete offline
-  implementation used by the application and tests.
+  implementation used behind FastAPI and in isolated tests.
 - `plan.md`, `pyproject.toml`, `uv.lock`, and `AGENTS.md` apply to the complete
   project and remain at the repository root.
 
-To connect a future backend, implement `ToolkitService` and inject it into `MainWindow`; UI code does not need to change.
+UI widgets remain transport-agnostic: they receive `ToolkitService` and do not
+make HTTP requests directly.
 
 ## Project layout
 
@@ -83,7 +102,7 @@ To connect a future backend, implement `ToolkitService` and inject it into `Main
 backend/
   src/ot_toolkit_backend/
     data/          Curated JSON reference content
-    services/      Backend boundary and offline implementation
+    services/      Backend boundary, HTTP client, and seeded implementation
     engineering.py Pure calculators and decoders
     models.py      Shared data-transfer models
   tests/

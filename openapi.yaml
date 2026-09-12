@@ -5,9 +5,9 @@ info:
   summary: HTTP projection of the frontend-facing ToolkitService contract.
   description: |
     This specification describes the backend contract expected by the OT Toolkit
-    frontend. The current desktop application injects ToolkitService directly and
-    uses MockToolkitService locally; it does not make HTTP requests yet. A future
-    HttpToolkitService can map these operations back to the same interface.
+    frontend. The desktop application injects HttpToolkitService, which maps
+    these HTTP operations back to the same ToolkitService interface used by the
+    UI. The FastAPI server uses the seeded MockToolkitService behind this adapter.
 
     Reference, discovery, and engineering operations require no authentication.
     Favorites are scoped to an in-memory user and require an opaque bearer token.
@@ -25,7 +25,7 @@ tags:
   - name: Discovery
     description: Search, hierarchy, and comparison operations.
   - name: Preferences
-    description: Device-local user preferences; no account is involved.
+    description: Authenticated per-user preferences held by the running backend.
   - name: Data tools
     description: Number and data-representation calculations.
   - name: Modbus tools

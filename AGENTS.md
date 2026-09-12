@@ -27,14 +27,17 @@ internet connection.
 - UI modules may import backend DTOs/models and the `ToolkitService` contract.
   They must not import backend calculators, JSON data loaders, filesystem
   persistence, or concrete service implementations.
-- The frontend composition root may construct `MockToolkitService` and inject it
-  into `MainWindow`.
+- The frontend composition root constructs `HttpToolkitService` and injects it
+  into `MainWindow`. Keep every frontend HTTP call inside that service adapter.
+- `MockToolkitService` remains the seeded implementation behind FastAPI and may
+  be injected directly in isolated UI tests and preview rendering.
 - Every new calculation, search, persistence operation, or data lookup must be
-  exposed through `ToolkitService`, implemented by `MockToolkitService`, and
-  called through that interface by the frontend.
+  exposed through `ToolkitService`, implemented by `MockToolkitService`, mapped
+  by `HttpToolkitService`, and called through that interface by the frontend.
 - Backend modules must not import PySide6 or frontend packages.
-- Keep the application fully usable offline. Do not add runtime API calls,
-  telemetry, remote fonts, or CDN assets for core features.
+- Keep the application fully usable without internet access. Its only runtime
+  API dependency is the locally configured OT Toolkit backend. Do not add
+  telemetry, remote fonts, CDN assets, or third-party runtime services.
 - Connectivity commands are informational output only and must never be
   executed by the application.
 - FastAPI code belongs under `backend/src/ot_toolkit_backend/api/` and is split

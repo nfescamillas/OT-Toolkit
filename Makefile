@@ -5,7 +5,7 @@
 help: ## Show the available commands
 	@echo "OT Toolkit commands:"
 	@echo "  make setup          Install the app and development dependencies"
-	@echo "  make run            Start the desktop frontend"
+	@echo "  make run            Start the frontend (backend must be running)"
 	@echo "  make api            Start the FastAPI backend"
 	@echo "  make dev            Start the frontend and backend together"
 	@echo "  make test           Run the complete test suite"
@@ -17,7 +17,7 @@ help: ## Show the available commands
 setup install: ## Install the app and development dependencies
 	uv sync --extra dev
 
-run frontend: ## Start the desktop frontend
+run frontend: ## Start the desktop frontend (backend must already be running)
 	uv run ot-toolkit
 
 api backend: ## Start the FastAPI backend
