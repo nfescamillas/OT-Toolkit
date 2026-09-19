@@ -2,6 +2,9 @@
 
 An offline Windows desktop field companion for automation and OT engineers. It combines a curated communications reference, hierarchy and comparison tools, Modbus utilities, data converters, subnet tools, port lookup, troubleshooting guides, and a glossary.
 
+The repository now includes two presentation targets: the original PySide6
+desktop application and a Vite browser frontend used by the Docker image.
+
 ## Run
 
 With GNU Make installed, set up and start the backend and desktop app with:
@@ -39,6 +42,38 @@ Runtime configuration can be overridden without changing source code:
 | `OT_TOOLKIT_USERNAME` | `demo` | Username used for favorites |
 | `OT_TOOLKIT_PASSWORD` | `demo-password` | Password used to obtain bearer tokens |
 | `OT_TOOLKIT_DATABASE_URL` | `sqlite+pysqlite:///./ot_toolkit.db` | SQLAlchemy database connection URL |
+| `OT_TOOLKIT_STATIC_DIR` | `frontend/dist-web` when present | Built browser frontend directory served at `/` |
+
+## Docker
+
+The multi-stage Docker build compiles the browser frontend with Node and copies
+only its static output into the Python runtime image. FastAPI serves the web app
+at `/` and the API at `/api/v1`.
+
+```powershell
+docker build -t ot-toolkit .
+docker run --rm -p 8000:8000 -v ot-toolkit-data:/data ot-toolkit
+```
+
+Open `http://127.0.0.1:8000`. The named volume preserves the SQLite database
+across container replacements. API documentation remains available at
+`http://127.0.0.1:8000/api/v1/docs`.
+
+For browser frontend development without Docker, run the API and Vite in
+separate terminals:
+
+```powershell
+uv run ot-toolkit-api
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+Vite serves the development UI at `http://127.0.0.1:5173` and proxies `/api`
+requests to FastAPI. A production build can be created with:
+
+```powershell
+npm --prefix frontend run build
+```
 
 ## Test
 
@@ -93,8 +128,8 @@ DBAPI driver is added to the environment.
 
 ## Architecture
 
-- `frontend/` contains the PySide6 desktop interface, launcher, UI smoke tests,
-  preview artifacts, and Windows packaging scripts.
+- `frontend/` contains the PySide6 desktop interface plus the Vite browser
+  frontend used in Docker.
 - `backend/` contains the service contract, local mock implementation, pure
   engineering calculations, structured reference data, and backend tests.
 - `backend/src/ot_toolkit_backend/services/base.py` is the single backend
@@ -123,6 +158,9 @@ backend/
     models.py      Shared data-transfer models
   tests/
 frontend/
+  web/                      Browser application source
+  package.json              Vite build configuration
+  dist-web/                 Generated static build (ignored)
   src/ot_toolkit_frontend/
     app.py         Desktop composition root
     ui/            PySide6 interface

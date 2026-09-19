@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup install run frontend api backend dev test test-backend test-frontend coverage package
+.PHONY: help setup install run frontend api backend dev web-install web-build web-dev docker-build docker-run test test-backend test-frontend coverage package
 
 help: ## Show the available commands
 	@echo "OT Toolkit commands:"
@@ -8,6 +8,10 @@ help: ## Show the available commands
 	@echo "  make run            Start the frontend (backend must be running)"
 	@echo "  make api            Start the FastAPI backend"
 	@echo "  make dev            Start the frontend and backend together"
+	@echo "  make web-build      Build the browser frontend"
+	@echo "  make web-dev        Start the Vite development server"
+	@echo "  make docker-build   Build the combined container image"
+	@echo "  make docker-run     Run the container on port 8000"
 	@echo "  make test           Run the complete test suite"
 	@echo "  make test-backend   Run backend tests only"
 	@echo "  make test-frontend  Run frontend tests only"
@@ -25,6 +29,21 @@ api backend: ## Start the FastAPI backend
 
 dev: ## Start the frontend and backend together
 	$(MAKE) --no-print-directory -j2 api run
+
+web-install: ## Install browser frontend dependencies
+	npm --prefix frontend ci
+
+web-build: web-install ## Build browser frontend static files
+	npm --prefix frontend run build
+
+web-dev: ## Start Vite with API requests proxied to localhost:8000
+	npm --prefix frontend run dev
+
+docker-build: ## Build the combined frontend/backend image
+	docker build -t ot-toolkit .
+
+docker-run: ## Run the image with persistent SQLite storage
+	docker run --rm -p 8000:8000 -v ot-toolkit-data:/data ot-toolkit
 
 test: ## Run the complete test suite
 	uv run pytest

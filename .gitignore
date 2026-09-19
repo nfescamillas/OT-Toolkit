@@ -12,6 +12,8 @@ dist/
 .pyinstaller/
 *.spec
 .preview-favorites.json
+frontend/node_modules/
+frontend/dist-web/
 *.db
 *.db-shm
 *.db-wal

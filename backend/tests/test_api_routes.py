@@ -63,3 +63,25 @@ def test_fastapi_schema_exposes_bearer_only_for_favorites(api_client: TestClient
     assert "bearerAuth" in schema["components"]["securitySchemes"]
     assert schema["paths"]["/api/v1/favorites"]["get"]["security"] == [{"bearerAuth": []}]
     assert schema["paths"]["/api/v1/technologies"]["get"].get("security") in (None, [])
+
+
+def test_backend_serves_built_frontend_without_shadowing_api(api_store, tmp_path):
+    from ot_toolkit_backend.api.main import create_app
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<h1>OT Toolkit Web</h1>", encoding="utf-8")
+    (static_dir / "app.js").write_text("console.log('ot-toolkit')", encoding="utf-8")
+
+    with TestClient(create_app(api_store, static_dir=static_dir)) as client:
+        assert "OT Toolkit Web" in client.get("/").text
+        assert "ot-toolkit" in client.get("/app.js").text
+        assert len(client.get("/api/v1/technologies").json()) == 28
+
+
+def test_explicit_missing_frontend_build_fails_fast(api_store, tmp_path):
+    from ot_toolkit_backend.api.main import create_app
+
+    with pytest.raises(RuntimeError, match="Frontend build not found"):
+        create_app(api_store, static_dir=tmp_path / "missing")
+    api_store.close()

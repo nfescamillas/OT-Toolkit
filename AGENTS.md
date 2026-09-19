@@ -10,8 +10,8 @@ internet connection.
 
 ## Repository boundaries
 
-- `frontend/` owns presentation code, desktop composition, UI tests, visual QA
-  artifacts, and Windows packaging scripts.
+- `frontend/` owns the PySide6 desktop UI, the Vite browser frontend, UI tests,
+  visual QA artifacts, and Windows packaging scripts.
 - `backend/` owns models, structured reference data, calculations, persistence,
   search, comparisons, hierarchy logic, and the service implementations.
 - Root files are shared project concerns: dependency/build configuration,
@@ -29,6 +29,8 @@ internet connection.
   persistence, or concrete service implementations.
 - The frontend composition root constructs `HttpToolkitService` and injects it
   into `MainWindow`. Keep every frontend HTTP call inside that service adapter.
+- Browser code belongs under `frontend/web/`, calls only `/api/v1`, and builds
+  with Vite into the ignored `frontend/dist-web/` directory.
 - `MockToolkitService` remains the seeded implementation behind FastAPI and may
   be injected directly in isolated UI tests and preview rendering.
 - Every new calculation, search, persistence operation, or data lookup must be
@@ -51,6 +53,8 @@ internet connection.
   require bearer authentication. Persist only password hashes and bearer-token
   digests, never their plaintext values, and never include production
   credentials in files or logs.
+- Register API routes before mounting browser static files at `/`; the API and
+  documentation paths must never be shadowed by the frontend mount.
 
 ## Reference content
 
